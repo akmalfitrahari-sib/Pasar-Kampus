@@ -9,9 +9,14 @@ class Component
 		}
 
 		$filename = str_ends_with($name, '.php') ? $name : $name . '.php';
-		$path = (defined('BASE_PATH') ? BASE_PATH : dirname(__DIR__)) . '/components/' . $filename;
+		$baseDir = (defined('BASE_PATH') ? BASE_PATH : dirname(__DIR__)) . '/components/';
+		$path = $baseDir . $filename;
 		if (!is_file($path)) {
-			throw new RuntimeException('Component not found: ' . $name);
+			if (is_file($baseDir . 'common/' . $filename)) {
+				$path = $baseDir . 'common/' . $filename;
+			} else {
+				throw new RuntimeException('Component not found: ' . $name);
+			}
 		}
 
 		extract($data ?? [], EXTR_SKIP);
