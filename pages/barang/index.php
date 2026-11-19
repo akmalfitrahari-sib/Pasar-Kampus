@@ -224,6 +224,127 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (($_POST['action'] ?? '') === 'ajuk
     exit;
 }
 
+// Handle Offer Request Submission (POST)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && (($_POST['action'] ?? '') === 'ajukan_penawaran')) {
+    $isJson = isset($_SERVER['HTTP_ACCEPT']) && str_contains($_SERVER['HTTP_ACCEPT'], 'application/json');
+
+    if (!$isLoggedIn) {
+        if ($isJson) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'redirect' => route('/login')]);
+            exit;
+        }
+        redirect('/login', 302);
+        exit;
+    }
+
+    $buyerId = (int)($session['user_id'] ?? 0);
+    $offerAmount = (int)preg_replace('/[^\d]/', '', (string)($_POST['offer_price'] ?? '0'));
+
+    if ($isOwner) {
+        flash('error', 'Anda tidak dapat menawar barang jualan Anda sendiri.');
+        if ($isJson) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Anda tidak dapat menawar barang jualan Anda sendiri.']);
+            exit;
+        }
+        redirect('/barang?id=' . $productId, 302);
+        exit;
+    }
+
+    if (!$isAvailable) {
+        flash('warning', 'Barang ini sedang tidak dapat ditawar (Status: ' . $product['status'] . ').');
+        if ($isJson) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Barang ini sedang tidak dapat ditawar.']);
+            exit;
+        }
+        redirect('/barang?id=' . $productId, 302);
+        exit;
+    }
+
+    if ($alreadyRequested) {
+        flash('warning', 'Anda sudah mengajukan penawaran/pembelian untuk barang ini.');
+        if ($isJson) {
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => false,
+                'already_requested' => true,
+                'message' => 'Anda sudah mengajukan penawaran/pembelian untuk barang ini.',
+                'redirect' => route('/riwayat.php')
+            ]);
+            exit;
+        }
+        redirect('/riwayat.php', 302);
+        exit;
+    }
+
+    if ($offerAmount <= 0) {
+        flash('error', 'Nominal penawaran tidak valid.');
+        if ($isJson) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Nominal penawaran tidak valid.']);
+            exit;
+        }
+        redirect('/barang?id=' . $productId, 302);
+        exit;
+    }
+
+    if ($offerAmount >= (int)$product['price']) {
+        flash('error', 'Nominal penawaran harus lebih rendah dari harga jual.');
+        if ($isJson) {
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => false,
+                'message' => 'Nominal penawaran harus lebih rendah dari harga jual (' . format_rupiah($product['price']) . '). Silakan langsung beli produk jika setuju dengan harga jual.'
+            ]);
+            exit;
+        }
+        redirect('/barang?id=' . $productId, 302);
+        exit;
+    }
+
+    $newTxId = null;
+    if ($buyerId && $dbProductId) {
+        try {
+            $formattedOffer = 'Rp. ' . number_format($offerAmount, 0, ',', '.');
+            $meetingPoint = "Tawaran: {$formattedOffer} | Lokasi: " . ($product['campus'] ?? $product['location'] ?? 'Area Kampus');
+            $ins = executeQuery(
+                "INSERT INTO requests (user_id, product_id, status, meeting_point, created_at, updated_at) 
+                 VALUES (:user_id, :product_id, 'PENDING', :meeting_point, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) 
+                 RETURNING transaction_id",
+                [
+                    'user_id' => $buyerId,
+                    'product_id' => $dbProductId,
+                    'meeting_point' => $meetingPoint
+                ],
+                'fetch'
+            );
+            if ($ins && isset($ins['transaction_id'])) {
+                $newTxId = (int)$ins['transaction_id'];
+            }
+        } catch (Throwable $e) {
+            error_log('Insert offer request failed: ' . $e->getMessage());
+        }
+    }
+
+    flash('success', 'Penawaran harga berhasil diajukan ke penjual!');
+
+    if ($isJson) {
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success' => true,
+            'transaction_id' => $newTxId,
+            'message' => 'Penawaran harga berhasil diajukan ke penjual.',
+            'redirect' => route('/riwayat.php')
+        ]);
+        exit;
+    }
+
+    redirect('/riwayat.php', 302);
+    exit;
+}
+
 // Get 4 recommendation products (excluding current or similar)
 $recommendations = [];
 foreach ($allProducts as $p) {
@@ -575,16 +696,115 @@ if (count($recommendations) < 4) {
             font-size: 0.88rem;
             color: #475569;
             line-height: 1.65;
-            margin-bottom: 28px;
+            margin-bottom: 20px;
             max-width: 620px;
+        }
+
+        /* OFFER / PENAWARAN FORM */
+        .pk-offer-section {
+            margin-bottom: 14px;
+            max-width: 620px;
+        }
+
+        .pk-offer-label {
+            display: block;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: #334155;
+            margin-bottom: 6px;
+        }
+
+        .pk-offer-input-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            max-width: 440px;
+        }
+
+        .pk-offer-input-wrapper {
+            display: flex;
+            align-items: center;
+            background: #FFFFFF;
+            border: 1.5px solid #CBD5E1;
+            border-radius: 8px;
+            padding: 0 12px;
+            height: 40px;
+            flex: 1;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+
+        .pk-offer-input-wrapper:focus-within {
+            border-color: var(--pk-primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+        }
+
+        .pk-offer-prefix {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #64748B;
+            margin-right: 6px;
+            user-select: none;
+        }
+
+        .pk-offer-input {
+            border: none;
+            outline: none;
+            width: 100%;
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: var(--pk-navy);
+            font-family: inherit;
+            background: transparent;
+        }
+
+        .pk-offer-input::placeholder {
+            font-size: 0.82rem;
+            font-weight: 400;
+            color: #94A3B8;
+        }
+
+        .pk-btn-offer {
+            background-color: var(--pk-navy);
+            color: #FFFFFF;
+            border: none;
+            border-radius: 20px;
+            padding: 0 22px;
+            height: 40px;
+            font-size: 0.84rem;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background-color 0.15s, transform 0.1s;
+            font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .pk-btn-offer:hover {
+            background-color: var(--pk-navy-dark);
+        }
+
+        .pk-btn-offer:disabled {
+            background-color: #94A3B8;
+            cursor: not-allowed;
+        }
+
+        .pk-offer-hint {
+            font-size: 0.75rem;
+            margin-top: 5px;
+            color: #DC2626;
+            display: none;
+            font-weight: 500;
         }
 
         /* ACTION BUTTONS */
         .pk-detail-actions {
             display: flex;
             align-items: center;
-            gap: 14px;
-            margin-top: auto;
+            gap: 12px;
+            margin-top: 6px;
+            max-width: 620px;
         }
 
         .pk-btn-report {
@@ -594,10 +814,11 @@ if (count($recommendations) < 4) {
             font-size: 0.88rem;
             font-weight: 700;
             padding: 10px 24px;
-            border-radius: 8px;
+            border-radius: 20px;
             cursor: pointer;
             transition: all 0.15s;
             font-family: inherit;
+            white-space: nowrap;
         }
 
         .pk-btn-report:hover {
@@ -612,14 +833,29 @@ if (count($recommendations) < 4) {
             font-size: 0.88rem;
             font-weight: 700;
             padding: 11px 28px;
-            border-radius: 8px;
+            border-radius: 20px;
             cursor: pointer;
             transition: background-color 0.2s;
             font-family: inherit;
+            flex: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            white-space: nowrap;
         }
 
         .pk-btn-buy:hover {
             background-color: var(--pk-navy-dark);
+        }
+
+        .pk-buy-hint {
+            font-size: 0.78rem;
+            color: #64748B;
+            margin-top: 6px;
+            margin-bottom: 0;
+            line-height: 1.4;
+            max-width: 620px;
         }
 
         /* 4. RECOMMENDATION SECTION */
@@ -1241,6 +1477,22 @@ if (count($recommendations) < 4) {
                     <div class="pk-section-heading">Deskripsi Produk</div>
                     <p class="pk-detail-desc"><?= nl2br(esc($product['description'])) ?></p>
 
+                    <!-- Form Penawaran -->
+                    <div class="pk-offer-section">
+                        <label class="pk-offer-label" for="inputOfferPrice">Buat penawaran (1x kesempatan)</label>
+                        <div class="pk-offer-input-group">
+                            <div class="pk-offer-input-wrapper">
+                                <span class="pk-offer-prefix">Rp</span>
+                                <input type="text" id="inputOfferPrice" class="pk-offer-input" placeholder="0" inputmode="numeric" oninput="formatOfferInput(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();handleOfferButtonClick();}" <?= ($isOwner || !$isAvailable || $alreadyRequested) ? 'disabled' : '' ?>>
+                            </div>
+                            <button type="button" class="pk-btn-offer" id="btnAjukanPenawaran" onclick="handleOfferButtonClick()" <?= ($isOwner || !$isAvailable || $alreadyRequested) ? 'disabled' : '' ?>>
+                                Ajukan Penawaran
+                            </button>
+                        </div>
+                        <div id="offerErrorHint" class="pk-offer-hint"></div>
+                    </div>
+
+                    <!-- Action Buttons -->
                     <div class="pk-detail-actions">
                         <button type="button" class="pk-btn-report" onclick="openReportModal()">Laporkan</button>
                         <?php if ($isLoggedIn): ?>
@@ -1258,13 +1510,14 @@ if (count($recommendations) < 4) {
                                 </button>
                             <?php else: ?>
                                 <button type="button" class="pk-btn-buy" id="btnAjukanPembelian" onclick="handleBuyButtonClick()">
-                                    Ajukan Pembelian
+                                    Beli produk (<?= format_rupiah($product['price']) ?>)
                                 </button>
                             <?php endif; ?>
                         <?php else: ?>
-                            <a href="<?= route('/login') ?>" class="pk-btn-buy" style="display: inline-flex; align-items: center; justify-content: center; text-decoration: none;">Ajukan Pembelian</a>
+                            <a href="<?= route('/login') ?>" class="pk-btn-buy">Beli produk (<?= format_rupiah($product['price']) ?>)</a>
                         <?php endif; ?>
                     </div>
+                    <p class="pk-buy-hint">Cocok dengan harga jual? Silahkan beli produk dan koordinasi titik COD dengan penjual via Whatsapp</p>
                 </div>
 
             </div>
@@ -1302,16 +1555,43 @@ if (count($recommendations) < 4) {
     </main>
 
     <!-- ================= MODAL AJUKAN PEMBELIAN ================= -->
-    <div class="pk-modal-backdrop" id="buyModal">
+    <div class="pk-modal-backdrop" id="buyModal" onclick="if(event.target===this)closeBuyModal()">
         <div class="pk-modal-box">
             <div style="font-size: 2.2rem; margin-bottom: 10px;">🤝</div>
-            <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--pk-navy); margin-bottom: 8px;">Ajukan Pembelian COD</h3>
-            <p style="font-size: 0.85rem; color: #64748B; line-height: 1.5; margin-bottom: 20px;">
+            <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--pk-navy); margin-bottom: 8px;">Konfirmasi Pembelian COD</h3>
+            <p style="font-size: 0.85rem; color: #64748B; line-height: 1.5; margin-bottom: 14px;">
                 Anda mengajukan pembelian untuk <strong><?= esc($product['title']) ?></strong> seharga <strong><?= format_rupiah($product['price']) ?></strong> dengan metode COD di area kampus.
             </p>
+            <div style="background-color: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 10px; padding: 12px 14px; margin-bottom: 20px; text-align: left; font-size: 0.8rem; color: #1E40AF; line-height: 1.45;">
+                <div style="font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+                    <span>ℹ️</span> Informasi Transaksi
+                </div>
+                Setelah pembelian diajukan, Anda dapat berkoordinasi langsung dengan penjual untuk menyepakati lokasi dan waktu serah terima barang secara COD.
+            </div>
             <div style="display: flex; gap: 10px; justify-content: center;">
-                <button type="button" class="pk-btn-report" onclick="closeBuyModal()">Batal</button>
-                <button type="button" class="pk-btn-buy" id="btnConfirmBuy" onclick="confirmPurchase()">Ajukan Pembelian</button>
+                <button type="button" class="pk-btn-report" onclick="closeBuyModal()" style="min-width: 110px;">Batal</button>
+                <button type="button" class="pk-btn-buy" id="btnConfirmBuy" onclick="confirmPurchase()" style="min-width: 170px;">Beli Produk</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= MODAL AJUKAN PENAWARAN ================= -->
+    <div class="pk-modal-backdrop" id="offerModal" onclick="if(event.target===this)closeOfferModal()">
+        <div class="pk-modal-box">
+            <div style="font-size: 2.2rem; margin-bottom: 10px;">💬</div>
+            <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--pk-navy); margin-bottom: 8px;">Konfirmasi Penawaran Harga</h3>
+            <p style="font-size: 0.85rem; color: #64748B; line-height: 1.5; margin-bottom: 14px;">
+                Anda akan mengajukan penawaran harga sebesar <strong id="modalOfferPriceText" style="color: var(--pk-primary); font-size: 1.05rem;">Rp. 0</strong> untuk barang <strong><?= esc($product['title']) ?></strong> (Harga jual saat ini: <?= format_rupiah($product['price']) ?>).
+            </p>
+            <div style="background-color: #FEF2F2; border: 1px solid #FECACA; border-radius: 10px; padding: 12px 14px; margin-bottom: 20px; text-align: left; font-size: 0.8rem; color: #991B1B; line-height: 1.45;">
+                <div style="font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+                    <span>⚠️</span> Perhatian Penting
+                </div>
+                Anda hanya memiliki <strong>1x kesempatan</strong> untuk menawar barang ini. Setelah penawaran diajukan, nominal tidak dapat diubah kembali. Penjual akan meninjau penawaran Anda.
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button type="button" class="pk-btn-report" onclick="closeOfferModal()" style="min-width: 110px;">Batal</button>
+                <button type="button" class="pk-btn-buy" id="btnConfirmOffer" onclick="confirmOffer()" style="min-width: 170px;">Konfirmasi Penawaran</button>
             </div>
         </div>
     </div>
@@ -1482,6 +1762,10 @@ if (count($recommendations) < 4) {
             return <?= $alreadyRequested ? 'true' : 'false' ?>;
         }
 
+        const productCurrentPrice = <?= (int)$product['price'] ?>;
+        const formattedBuyStatement = <?= json_encode('Beli produk (' . format_rupiah($product['price']) . ')') ?>;
+        let currentOfferAmount = 0;
+
         function updateBuyButtonState() {
             const btn = document.getElementById('btnAjukanPembelian');
             if (!btn) return;
@@ -1492,11 +1776,159 @@ if (count($recommendations) < 4) {
                 btn.style.cursor = 'not-allowed';
                 btn.setAttribute('data-already-requested', 'true');
             } else {
-                btn.innerText = 'Ajukan Pembelian';
+                btn.innerText = formattedBuyStatement;
                 btn.style.backgroundColor = '';
                 btn.style.borderColor = '';
                 btn.style.cursor = 'pointer';
                 btn.removeAttribute('data-already-requested');
+            }
+        }
+
+        function formatOfferInput(el) {
+            const hint = document.getElementById('offerErrorHint');
+            if (hint) {
+                hint.style.display = 'none';
+                hint.innerText = '';
+            }
+            let raw = el.value.replace(/\D/g, '');
+            if (!raw) {
+                el.value = '';
+                currentOfferAmount = 0;
+                return;
+            }
+            const num = parseInt(raw, 10);
+            currentOfferAmount = num;
+            el.value = num.toLocaleString('id-ID');
+        }
+
+        function handleOfferButtonClick() {
+            <?php if (!$isLoggedIn): ?>
+                window.location.href = '<?= route('/login') ?>';
+                return;
+            <?php endif; ?>
+
+            <?php if ($isOwner): ?>
+                alert('Anda tidak dapat menawar barang jualan Anda sendiri.');
+                return;
+            <?php endif; ?>
+
+            <?php if (!$isAvailable): ?>
+                alert('Barang ini sedang tidak dapat ditawar.');
+                return;
+            <?php endif; ?>
+
+            if (isItemAlreadyRequested()) {
+                alert('Anda sudah mengajukan permintaan untuk barang ini.');
+                window.location.href = '<?= route('/riwayat.php') ?>';
+                return;
+            }
+
+            const inputEl = document.getElementById('inputOfferPrice');
+            const hint = document.getElementById('offerErrorHint');
+            const rawVal = (inputEl?.value || '').replace(/\D/g, '');
+            const amount = parseInt(rawVal, 10);
+
+            if (!amount || amount <= 0) {
+                if (hint) {
+                    hint.innerText = 'Silakan masukkan nominal penawaran yang valid.';
+                    hint.style.display = 'block';
+                }
+                inputEl?.focus();
+                return;
+            }
+
+            if (amount >= productCurrentPrice) {
+                if (hint) {
+                    hint.innerText = 'Nominal penawaran harus lebih rendah dari harga jual (Rp. ' + Number(productCurrentPrice).toLocaleString('id-ID') + '). Silakan langsung klik Beli Produk jika setuju dengan harga jual.';
+                    hint.style.display = 'block';
+                }
+                inputEl?.focus();
+                return;
+            }
+
+            currentOfferAmount = amount;
+            const displayEl = document.getElementById('modalOfferPriceText');
+            if (displayEl) {
+                displayEl.innerText = 'Rp. ' + Number(amount).toLocaleString('id-ID');
+            }
+            openOfferModal();
+        }
+
+        function openOfferModal() {
+            <?php if (!$isLoggedIn): ?>
+                window.location.href = '<?= route('/login') ?>';
+                return;
+            <?php endif; ?>
+
+            if (isItemAlreadyRequested()) {
+                alert('Anda sudah mengajukan permintaan untuk barang ini.');
+                window.location.href = '<?= route('/riwayat.php') ?>';
+                return;
+            }
+
+            document.getElementById('offerModal').classList.add('show');
+        }
+
+        function closeOfferModal() {
+            document.getElementById('offerModal').classList.remove('show');
+        }
+
+        async function confirmOffer() {
+            if (isItemAlreadyRequested()) {
+                alert('Anda sudah mengajukan permintaan untuk barang ini.');
+                closeOfferModal();
+                window.location.href = '<?= route('/riwayat.php') ?>';
+                return;
+            }
+
+            const btn = document.getElementById('btnConfirmOffer');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerText = 'Mengajukan...';
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('action', 'ajukan_penawaran');
+                formData.append('product_id', <?= (int)$productId ?>);
+                formData.append('offer_price', currentOfferAmount);
+
+                const res = await fetch(window.location.href, {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json' },
+                    body: formData
+                });
+
+                const data = await res.json();
+                if (data && data.success) {
+                    closeOfferModal();
+                    window.location.href = data.redirect || '<?= route('/riwayat.php') ?>';
+                } else {
+                    alert((data && data.message) ? data.message : 'Gagal mengajukan penawaran.');
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerText = 'Konfirmasi Penawaran';
+                    }
+                    if (data && data.redirect) {
+                        window.location.href = data.redirect;
+                    }
+                }
+            } catch (err) {
+                console.error('Error submitting offer request:', err);
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = window.location.href;
+                const act = document.createElement('input');
+                act.type = 'hidden'; act.name = 'action'; act.value = 'ajukan_penawaran';
+                form.appendChild(act);
+                const pid = document.createElement('input');
+                pid.type = 'hidden'; pid.name = 'product_id'; pid.value = '<?= (int)$productId ?>';
+                form.appendChild(pid);
+                const op = document.createElement('input');
+                op.type = 'hidden'; op.name = 'offer_price'; op.value = String(currentOfferAmount);
+                form.appendChild(op);
+                document.body.appendChild(form);
+                form.submit();
             }
         }
 
@@ -1577,7 +2009,7 @@ if (count($recommendations) < 4) {
                     alert((data && data.message) ? data.message : 'Gagal mengajukan pembelian.');
                     if (btn) {
                         btn.disabled = false;
-                        btn.innerText = 'Ajukan Pembelian';
+                        btn.innerText = 'Beli Produk';
                     }
                     if (data && data.redirect) {
                         window.location.href = data.redirect;
