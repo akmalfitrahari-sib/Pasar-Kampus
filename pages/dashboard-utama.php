@@ -825,6 +825,29 @@ $allProducts = get_catalog_products();
             accent-color: var(--pk-navy);
         }
 
+        .pk-radio-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .pk-radio-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.82rem;
+            color: #334155;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .pk-radio-item input[type="radio"] {
+            width: 17px;
+            height: 17px;
+            cursor: pointer;
+            accent-color: var(--pk-navy);
+        }
+
         .pk-price-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -1251,33 +1274,39 @@ $allProducts = get_catalog_products();
                     </div>
 
                     <div class="pk-sidebar-body">
-                        <!-- 1. KATEGORI -->
+                        <!-- 1. KATEGORI (Checkbox) -->
                         <div>
                             <div class="pk-filter-group-title">KATEGORI</div>
-                            <ul class="pk-filter-list" id="sidebarCatList">
-                                <li class="pk-filter-item" onclick="selectCategory('Buku', this)">Buku</li>
-                                <li class="pk-filter-item" onclick="selectCategory('Elektronik', this)">Elektronik</li>
-                                <li class="pk-filter-item" onclick="selectCategory('Perlengkapan Kos', this)">Perlengkapan Kos</li>
-                                <li class="pk-filter-item" onclick="selectCategory('Pakaian', this)">Pakaian</li>
-                                <li class="pk-filter-item" onclick="selectCategory('ATK', this)">ATK</li>
-                                <li class="pk-filter-item" onclick="selectCategory('Lainnya', this)">Lainnya</li>
-                            </ul>
-                            <div class="pk-see-more" onclick="toggleExpandList('sidebarCatList', this)">Lihat semua &#x25BE;</div>
+                            <div class="pk-checkbox-group" id="sidebarCatGroup">
+                                <label class="pk-checkbox-item">
+                                    <input type="checkbox" name="catFilter" value="Buku" onchange="applyCatalogFilters()">
+                                    <span>Buku</span>
+                                </label>
+                                <label class="pk-checkbox-item">
+                                    <input type="checkbox" name="catFilter" value="Elektronik" onchange="applyCatalogFilters()">
+                                    <span>Elektronik</span>
+                                </label>
+                                <label class="pk-checkbox-item">
+                                    <input type="checkbox" name="catFilter" value="Perlengkapan Kos" onchange="applyCatalogFilters()">
+                                    <span>Perlengkapan Kos</span>
+                                </label>
+                                <label class="pk-checkbox-item">
+                                    <input type="checkbox" name="catFilter" value="Pakaian" onchange="applyCatalogFilters()">
+                                    <span>Pakaian</span>
+                                </label>
+                                <label class="pk-checkbox-item">
+                                    <input type="checkbox" name="catFilter" value="ATK" onchange="applyCatalogFilters()">
+                                    <span>ATK</span>
+                                </label>
+                                <label class="pk-checkbox-item">
+                                    <input type="checkbox" name="catFilter" value="Lainnya" onchange="applyCatalogFilters()">
+                                    <span>Lainnya</span>
+                                </label>
+                            </div>
+                            <div class="pk-see-more" onclick="toggleExpandList('sidebarCatGroup', this)">Lihat semua &#x25BE;</div>
                         </div>
 
-                        <!-- 2. TAGS -->
-                        <div>
-                            <div class="pk-filter-group-title">TAGS</div>
-                            <ul class="pk-filter-list" id="sidebarTagList">
-                                <li class="pk-filter-item" onclick="selectTag('#ModulKuliah', this)">#ModulKuliah</li>
-                                <li class="pk-filter-item" onclick="selectTag('#JasAlmamater', this)">#JasAlmamater</li>
-                                <li class="pk-filter-item" onclick="selectTag('#MejaBelajar', this)">#MejaBelajar</li>
-                                <li class="pk-filter-item" onclick="selectTag('#Jaket', this)">#Jaket</li>
-                            </ul>
-                            <div class="pk-see-more" onclick="toggleExpandList('sidebarTagList', this)">Lihat semua &#x25BE;</div>
-                        </div>
-
-                        <!-- 3. LOKASI -->
+                        <!-- 2. LOKASI -->
                         <div>
                             <div class="pk-filter-group-title">LOKASI</div>
                             <div class="pk-checkbox-group" id="sidebarLocGroup">
@@ -1301,6 +1330,33 @@ $allProducts = get_catalog_products();
                             <div class="pk-see-more" onclick="toggleExpandList('sidebarLocGroup', this)">Lihat semua &#x25BE;</div>
                         </div>
 
+                        <!-- 3. KONDISI BARANG (Radio Button) -->
+                        <div>
+                            <div class="pk-filter-group-title">KONDISI BARANG</div>
+                            <div class="pk-radio-group" id="sidebarCondGroup">
+                                <label class="pk-radio-item">
+                                    <input type="radio" name="condFilter" value="" checked onchange="applyCatalogFilters()">
+                                    <span>Semua Kondisi</span>
+                                </label>
+                                <label class="pk-radio-item">
+                                    <input type="radio" name="condFilter" value="bekas" onchange="applyCatalogFilters()">
+                                    <span>Bekas</span>
+                                </label>
+                                <label class="pk-radio-item">
+                                    <input type="radio" name="condFilter" value="cukup" onchange="applyCatalogFilters()">
+                                    <span>Cukup</span>
+                                </label>
+                                <label class="pk-radio-item">
+                                    <input type="radio" name="condFilter" value="baik" onchange="applyCatalogFilters()">
+                                    <span>Baik</span>
+                                </label>
+                                <label class="pk-radio-item">
+                                    <input type="radio" name="condFilter" value="sangat bagus" onchange="applyCatalogFilters()">
+                                    <span>Sangat Bagus</span>
+                                </label>
+                            </div>
+                        </div>
+
                         <!-- 4. RENTANG HARGA -->
                         <div>
                             <div class="pk-filter-group-title">RENTANG HARGA</div>
@@ -1316,21 +1372,7 @@ $allProducts = get_catalog_products();
                             </div>
                         </div>
 
-                        <!-- 5. KONDISI BARANG (Slider + Label Interaktif 2 Arah) -->
-                        <div>
-                            <div class="pk-filter-group-title">KONDISI BARANG</div>
-                            <div style="padding: 4px 0 8px;">
-                                <input type="range" id="conditionRangeInput" min="0" max="3" value="0" step="1" style="width: 100%; accent-color: var(--pk-navy); cursor: pointer;" oninput="onConditionChange()">
-                                <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 0.68rem;">
-                                    <span class="cond-label" id="condLabel0" onclick="setConditionRange(0)">Bekas</span>
-                                    <span class="cond-label" id="condLabel1" onclick="setConditionRange(1)">Cukup</span>
-                                    <span class="cond-label" id="condLabel2" onclick="setConditionRange(2)">Baik</span>
-                                    <span class="cond-label" id="condLabel3" onclick="setConditionRange(3)">Sangat bagus</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- 6. ACTION BUTTONS -->
+                        <!-- 5. ACTION BUTTONS -->
                         <div class="pk-sidebar-actions">
                             <button type="button" class="pk-reset-btn" onclick="resetSidebarFilters()">Reset all</button>
                             <button type="button" class="pk-apply-btn" onclick="closeSidebar()">Lihat Hasil</button>
@@ -1372,7 +1414,7 @@ $allProducts = get_catalog_products();
                                 'price' => 90000,
                                 'image' => 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&q=80&w=800',
                             ];
-                            Component::include('card', [
+                            Component::include('common/card', [
                                 'id' => $featuredItem['id'],
                                 'title' => $featuredItem['title'],
                                 'description' => $featuredItem['short_desc'] ?? $featuredItem['description'] ?? '',
@@ -1412,7 +1454,7 @@ $allProducts = get_catalog_products();
                     <div class="pk-grid" id="productGrid">
                         <?php foreach (array_slice($allProducts, 0, 12) as $item): ?>
                             <?php
-                            Component::include('card', [
+                            Component::include('common/card', [
                                 'id' => $item['id'],
                                 'title' => $item['title'],
                                 'description' => $item['short_desc'] ?? $item['description'] ?? '',
@@ -1497,9 +1539,7 @@ $allProducts = get_catalog_products();
     <script>
         const rawProducts = <?= json_encode($allProducts, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
         
-        let selectedCategory = <?= json_encode($initialCategory) ?>;
-        let selectedTag = '';
-        let conditionActive = false; // Status apakah filter kondisi sedang aktif digunakan
+        const initialCategory = <?= json_encode($initialCategory) ?>;
         let currentPage = 1;
         const pageSize = 12;
 
@@ -1529,61 +1569,10 @@ $allProducts = get_catalog_products();
             }
         });
 
-        function selectCategory(cat, element) {
-            if (selectedCategory === cat) {
-                selectedCategory = '';
-                element.classList.remove('active');
-            } else {
-                selectedCategory = cat;
-                document.querySelectorAll('#sidebarCatList .pk-filter-item').forEach(el => el.classList.remove('active'));
-                element.classList.add('active');
-            }
-            applyCatalogFilters();
-        }
-
-        function selectTag(tag, element) {
-            if (selectedTag === tag) {
-                selectedTag = '';
-                element.classList.remove('active');
-            } else {
-                selectedTag = tag;
-                document.querySelectorAll('#sidebarTagList .pk-filter-item').forEach(el => el.classList.remove('active'));
-                element.classList.add('active');
-            }
-            applyCatalogFilters();
-        }
-
-        function updateConditionLabels(val) {
-            document.querySelectorAll('.cond-label').forEach((el, idx) => {
-                if (idx === parseInt(val)) {
-                    el.classList.add('active');
-                } else {
-                    el.classList.remove('active');
-                }
-            });
-        }
-
-        function onConditionChange() {
-            conditionActive = true;
-            const val = document.getElementById('conditionRangeInput')?.value || 0;
-            updateConditionLabels(val);
-            applyCatalogFilters();
-        }
-
-        function setConditionRange(val) {
-            const slider = document.getElementById('conditionRangeInput');
-            if (slider) {
-                slider.value = val;
-                conditionActive = true;
-                updateConditionLabels(val);
-                applyCatalogFilters();
-            }
-        }
-
         function toggleExpandList(listId, toggleBtn) {
             const list = document.getElementById(listId);
             if (!list) return;
-            if (toggleBtn.innerText.includes('▼')) {
+            if (toggleBtn.innerText.includes('▼') || toggleBtn.innerText.includes('▾')) {
                 toggleBtn.innerText = 'Tutup ▲';
             } else {
                 toggleBtn.innerText = 'Lihat semua ▼';
@@ -1591,16 +1580,13 @@ $allProducts = get_catalog_products();
         }
 
         function resetSidebarFilters() {
-            selectedCategory = '';
-            selectedTag = '';
-            conditionActive = false;
-            document.querySelectorAll('#sidebarCatList .pk-filter-item').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('#sidebarTagList .pk-filter-item').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.cond-label').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('input[name="catFilter"]').forEach(cb => cb.checked = false);
             document.querySelectorAll('input[name="locFilter"]').forEach(cb => cb.checked = false);
             
-            const condEl = document.getElementById('conditionRangeInput');
-            if (condEl) condEl.value = 0;
+            const defaultCondRadio = document.querySelector('input[name="condFilter"][value=""]');
+            if (defaultCondRadio) {
+                defaultCondRadio.checked = true;
+            }
 
             const minEl = document.getElementById('priceMinInput');
             const maxEl = document.getElementById('priceMaxInput');
@@ -1619,24 +1605,20 @@ $allProducts = get_catalog_products();
             const minPrice = parseFloat(document.getElementById('priceMinInput')?.value) || 0;
             const maxPrice = parseFloat(document.getElementById('priceMaxInput')?.value) || Infinity;
 
+            const checkedCategories = Array.from(document.querySelectorAll('input[name="catFilter"]:checked'))
+                .map(cb => cb.value.toLowerCase());
+
             const checkedLocations = Array.from(document.querySelectorAll('input[name="locFilter"]:checked'))
                 .map(cb => cb.value.toLowerCase());
             
-            const conditionVal = parseInt(document.getElementById('conditionRangeInput')?.value) || 0;
+            const selectedCondition = (document.querySelector('input[name="condFilter"]:checked')?.value || '').toLowerCase();
 
             const filtered = rawProducts.filter(item => {
-                // Category match
-                if (selectedCategory) {
+                // Category match (checkbox filter)
+                if (checkedCategories.length > 0) {
                     const itemCat = (item.category || '').toLowerCase();
-                    const selCat = selectedCategory.toLowerCase();
-                    if (!itemCat.includes(selCat) && !selCat.includes(itemCat)) {
-                        return false;
-                    }
-                }
-
-                // Tag match
-                if (selectedTag && !item.tags.map(t => t.toLowerCase()).includes(selectedTag.toLowerCase())) {
-                    return false;
+                    const hasCatMatch = checkedCategories.some(cat => itemCat.includes(cat) || cat.includes(itemCat));
+                    if (!hasCatMatch) return false;
                 }
 
                 // Location match
@@ -1651,20 +1633,22 @@ $allProducts = get_catalog_products();
                     return false;
                 }
                 
-                // Condition match
-                if (conditionActive) {
-                    const itemCond = (item.condition || '').toLowerCase();
-                    if (conditionVal === 0 && !itemCond.includes('bekas')) {
-                        return false;
+                // Condition match (radio button)
+                if (selectedCondition) {
+                    let itemCond = (item.condition || '').toLowerCase();
+                    const numericMap = { '1': 'bekas', '2': 'cukup', '3': 'baik', '4': 'sangat bagus' };
+                    if (numericMap[itemCond]) {
+                        itemCond = numericMap[itemCond];
                     }
-                    if (conditionVal === 1 && !itemCond.includes('cukup')) {
-                        return false;
-                    }
-                    if (conditionVal === 2 && !itemCond.includes('baik')) {
-                        return false;
-                    }
-                    if (conditionVal === 3 && !itemCond.includes('sangat bagus')) {
-                        return false;
+
+                    if (selectedCondition === 'bekas') {
+                        if (!itemCond.includes('bekas') && !itemCond.includes('layak')) return false;
+                    } else if (selectedCondition === 'cukup') {
+                        if (!itemCond.includes('cukup')) return false;
+                    } else if (selectedCondition === 'baik') {
+                        if (!itemCond.includes('baik') || itemCond.includes('sangat')) return false;
+                    } else if (selectedCondition === 'sangat bagus') {
+                        if (!itemCond.includes('sangat bagus') && !itemCond.includes('sangat')) return false;
                     }
                 }
 
@@ -1825,14 +1809,14 @@ $allProducts = get_catalog_products();
                 localStorage.removeItem('pk_user_riwayat');
             } catch(e) {}
 
-            if (selectedCategory) {
-                document.querySelectorAll('#sidebarCatList .pk-filter-item').forEach(el => {
-                    if (el.innerText.trim().toLowerCase() === selectedCategory.toLowerCase()) {
-                        el.classList.add('active');
+            if (initialCategory) {
+                document.querySelectorAll('input[name="catFilter"]').forEach(cb => {
+                    if (cb.value.toLowerCase() === initialCategory.toLowerCase()) {
+                        cb.checked = true;
                     }
                 });
             }
-            if (selectedCategory || (document.getElementById('dashSearch')?.value || '').trim()) {
+            if (initialCategory || (document.getElementById('dashSearch')?.value || '').trim()) {
                 applyCatalogFilters();
             }
         });
