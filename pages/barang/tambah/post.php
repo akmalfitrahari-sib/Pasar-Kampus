@@ -100,6 +100,16 @@ function create(): string
 {
     global $userId, $pdo;
 
+    $userProfile = fetch(executeQuery(
+        "SELECT district, subdistrict FROM user_profiles WHERE user_id = ? ORDER BY profile_id DESC LIMIT 1",
+        [$userId]
+    ));
+    $hasLocation = !empty(trim((string) ($userProfile['district'] ?? '')))
+        && !empty(trim((string) ($userProfile['subdistrict'] ?? '')));
+    if (!$hasLocation) {
+        throw new InvalidArgumentException('Harap lengkapi lokasi (kecamatan & kelurahan) di profil Anda sebelum menjual barang.');
+    }
+
     $data = [
         'namaBarang' => trim((string) ($_POST['namaBarang'] ?? '')),
         'kategori' => trim((string) ($_POST['kategori'] ?? '')),
