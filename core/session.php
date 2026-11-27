@@ -47,6 +47,14 @@ function session_include(string $redirect = '/login', int $response_code = 302) 
 		return;
 	}
 
+	if (in_array($session['account_status'] ?? 'Aktif', ['Suspend', 'Banned'], true)) {
+		$status = $session['account_status'];
+		destroy_session();
+		flash('error', "Akses ditolak. Akun Anda sedang dalam status {$status}.");
+		redirect('/login', 302);
+		return;
+	}
+
 	return $session;
 }
 
