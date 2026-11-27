@@ -2,6 +2,7 @@
 
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'submit-report') {
+    $session = get_session();
     $userId = $session['user_id'] ?? null;
     if ($userId === null) {
         $guestUser = fetch(executeQuery("SELECT user_id FROM users WHERE role = 'user' ORDER BY user_id ASC LIMIT 1"));
@@ -38,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'submi
     if ($reportId > 0 && isset($_FILES['lampiran'])) {
         $files = $_FILES['lampiran'];
         $uploadTarget = 'reports';
-        $uploadDir = dirname(__DIR__, 2) . '/public/uploads/' . $uploadTarget;
+        $uploadDir = UPLOAD_BASEDIR . '/' . $uploadTarget;
         if (!is_dir($uploadDir)) {
             mkdir($uploadDir, 0775, true);
         }

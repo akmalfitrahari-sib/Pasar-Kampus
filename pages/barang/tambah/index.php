@@ -1,6 +1,20 @@
 <?php
 
-session_include('/login');
+$session = session_include('/login');
+$userId = (int) ($session['user_id'] ?? 0);
+
+$userProfile = fetch(executeQuery(
+    "SELECT district, subdistrict FROM user_profiles WHERE user_id = ? ORDER BY profile_id DESC LIMIT 1",
+    [$userId]
+));
+
+$hasLocation = !empty(trim((string) ($userProfile['district'] ?? '')))
+    && !empty(trim((string) ($userProfile['subdistrict'] ?? '')));
+
+if (!$hasLocation) {
+    flash('error', 'Silakan lengkapi profil lokasi Anda (kecamatan & kelurahan) terlebih dahulu sebelum menjual barang.');
+    redirect('/user', 302);
+}
 
 $categories = fetchColumn(executeQuery('SELECT category_name FROM categories ORDER BY category_name ASC'));
 $formValues = [

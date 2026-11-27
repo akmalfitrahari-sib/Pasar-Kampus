@@ -63,6 +63,25 @@ function process(): void
         return;
     }
 
+    $accountStatus = $user['account_status'] ?? 'Aktif';
+    if ($accountStatus === 'Suspend') {
+        $msg = 'Akun Anda sedang ditangguhkan (Suspend).';
+        if (!empty($user['notes'])) {
+            $msg .= ' Alasan: ' . $user['notes'];
+        }
+        flash('error', $msg);
+        return;
+    }
+
+    if ($accountStatus === 'Banned') {
+        $msg = 'Akun Anda telah dinonaktifkan secara permanen (Banned).';
+        if (!empty($user['notes'])) {
+            $msg .= ' Alasan: ' . $user['notes'];
+        }
+        flash('error', $msg);
+        return;
+    }
+
     unset($user['password']);
     create_session($user);
     flash('success', 'Berhasil masuk!');

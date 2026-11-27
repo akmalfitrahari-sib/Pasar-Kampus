@@ -83,7 +83,7 @@ FROM (
                 NULLIF(TRIM(prof.district), ''),
                 NULLIF(TRIM(prof.subdistrict), '')), ''),
             CASE
-                WHEN NULLIF(TRIM(prof.campus), '') IS NULL THEN 'Kecamatan Lowokwaru'
+                WHEN NULLIF(TRIM(prof.campus), '') IS NULL THEN 'Area Kampus'
                 WHEN TRIM(prof.campus) LIKE 'Area %' THEN TRIM(prof.campus)
                 ELSE 'Area ' || TRIM(prof.campus)
             END
