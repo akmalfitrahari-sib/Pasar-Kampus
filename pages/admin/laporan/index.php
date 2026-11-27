@@ -106,7 +106,21 @@ Component::include('admin/header', [
         const gallery = document.getElementById('tinjauEvidenceGallery');
         gallery.replaceChildren();
         reportEvidence(report.bukti).forEach((evidence, index) => {
-            const rawUrl = typeof evidence === 'string' ? evidence : evidence?.url || evidence?.path || '';
+            let rawUrl = typeof evidence === 'string' ? evidence : evidence?.url || evidence?.path || '';
+            if (!rawUrl) return;
+
+            if (rawUrl.includes('/public/uploads/')) {
+                const relativePath = rawUrl.substring(rawUrl.indexOf('/public/uploads/'));
+                try {
+                    const testUrl = new URL(rawUrl, window.location.origin);
+                    if (testUrl.host !== window.location.host) {
+                        rawUrl = window.location.origin + relativePath;
+                    }
+                } catch {
+                    rawUrl = relativePath;
+                }
+            }
+
             let parsed;
             try {
                 parsed = new URL(rawUrl, window.location.origin);
